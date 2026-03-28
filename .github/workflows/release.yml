@@ -1,4 +1,4 @@
-name: Release
+name: Release Obsidian plugin
 
 on:
   push:
@@ -8,27 +8,28 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v3
 
-      - name: Setup Node.js
+      - name: Use Node.js
         uses: actions/setup-node@v3
         with:
           node-version: "18.x"
 
-      - name: Install dependencies
-        run: npm install
-
-      - name: Build
-        run: npm run build
+      - name: Build plugin
+        run: |
+          npm install
+          npm run build
 
       - name: Create release
-        uses: softprops/action-gh-release@v1
-        with:
-          files: |
-            main.js
-            manifest.json
-            styles.css
-          body_path: CHANGELOG.md
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          tag="${GITHUB_REF#refs/tags/}"
+
+          gh release create "$tag" \
+            --title="$tag" \
+            --draft \
+            main.js manifest.json styles.css
