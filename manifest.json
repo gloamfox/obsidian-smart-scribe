@@ -1,0 +1,11 @@
+{
+  "id": "smartscribe",
+  "name": "SmartScribe",
+  "version": "1.0.0",
+  "minAppVersion": "0.15.0",
+  "description": "AI-powered writing assistant for Obsidian. Generate metadata (titles, tags, categories, summaries) and optimize your writing with support for multiple AI platforms.",
+  "author": "gloamfox",
+  "authorUrl": "https://gloamfox.github.io",
+  "fundingUrl": "",
+  "isDesktopOnly": false
+}
