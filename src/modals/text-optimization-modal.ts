@@ -1,6 +1,165 @@
 import { App, Component, MarkdownRenderer, Modal } from "obsidian";
 import type { OptimizationResult } from "../ai-provider";
 
+// 注入 CSS 样式
+const STYLE_ID = "ai-optimize-modal-styles";
+function injectStyles() {
+	if (document.getElementById(STYLE_ID)) return;
+
+	const style = document.createElement("style");
+	style.id = STYLE_ID;
+	style.textContent = `
+		.ai-optimize-modal {
+			width: 90vw !important;
+			max-width: 1200px !important;
+			height: 90vh !important;
+		}
+		.ai-optimize-modal .modal-content {
+			height: 100%;
+			display: flex;
+			flex-direction: column;
+		}
+		.ai-optimize-container {
+			display: flex;
+			gap: 20px;
+			height: calc(90vh - 180px);
+			min-height: 400px;
+			margin-bottom: 20px;
+		}
+		.ai-optimize-left {
+			flex: 1;
+			display: flex;
+			flex-direction: column;
+			min-width: 0;
+			overflow: hidden;
+		}
+		.ai-optimize-tab-header {
+			display: flex;
+			gap: 4px;
+			padding: 4px 4px 0 4px;
+			background-color: var(--background-secondary);
+			border-bottom: 1px solid var(--background-modifier-border);
+			margin-bottom: 0;
+			border-radius: 4px 4px 0 0;
+		}
+		.ai-optimize-tab {
+			padding: 6px 16px;
+			border: 1px solid transparent;
+			border-bottom: none;
+			border-radius: 4px 4px 0 0;
+			background: transparent;
+			cursor: pointer;
+			color: var(--text-muted);
+			font-weight: 400;
+			font-size: 13px;
+			transition: all 0.15s ease;
+		}
+		.ai-optimize-tab-active {
+			background: var(--background-primary) !important;
+			border-color: var(--background-modifier-border) !important;
+			color: var(--text-normal) !important;
+			font-weight: 500 !important;
+		}
+		.ai-optimize-refresh-btn {
+			margin-left: auto;
+			padding: 4px 12px;
+			font-size: 12px;
+			border: 1px solid var(--background-modifier-border);
+			border-radius: 4px;
+			background: var(--background-primary);
+			color: var(--text-muted);
+			cursor: pointer;
+			opacity: 0;
+			pointer-events: none;
+			transition: all 0.15s ease;
+		}
+		.ai-optimize-refresh-btn.visible {
+			opacity: 1;
+			pointer-events: auto;
+		}
+		.ai-optimize-refresh-btn:hover {
+			color: var(--text-normal);
+			border-color: var(--interactive-accent);
+		}
+		.ai-optimize-editor {
+			flex: 1;
+			border: 1px solid var(--background-modifier-border);
+			border-top: none;
+			border-radius: 0 0 4px 4px;
+			overflow: auto;
+			background-color: var(--background-primary);
+			position: relative;
+		}
+		.ai-optimize-editable {
+			width: 100%;
+			min-height: 100%;
+			padding: 12px;
+			outline: none;
+			line-height: 1.6;
+			white-space: pre-wrap;
+			overflow-wrap: break-word;
+			font-family: var(--font-mono);
+			font-size: var(--font-text-size);
+		}
+		.ai-optimize-editable.hidden {
+			display: none !important;
+		}
+		.ai-optimize-preview {
+			width: 100%;
+			min-height: 100%;
+			padding: 12px;
+			display: none;
+			line-height: 1.6;
+		}
+		.ai-optimize-preview.visible {
+			display: block !important;
+		}
+		.ai-optimize-right {
+			width: 300px;
+			flex-shrink: 0;
+			display: flex;
+			flex-direction: column;
+			overflow: hidden;
+		}
+		.ai-optimize-right > label {
+			margin-bottom: 8px;
+			font-weight: bold;
+		}
+		.ai-optimize-suggestions {
+			flex: 1;
+			border: 1px solid var(--background-modifier-border);
+			border-radius: 4px;
+			padding: 12px;
+			background-color: var(--background-secondary);
+			overflow: auto;
+			font-size: 13px;
+			line-height: 1.6;
+		}
+		.ai-optimize-suggestion-item {
+			margin-bottom: 8px;
+			padding-bottom: 8px;
+			border-bottom: 1px solid var(--background-modifier-border);
+		}
+		.ai-optimize-suggestion-item:last-child {
+			border-bottom: none;
+			margin-bottom: 0;
+			padding-bottom: 0;
+		}
+		.ai-optimize-suggestion-bullet {
+			color: var(--interactive-accent);
+			font-weight: bold;
+		}
+		.ai-optimize-suggestion-text {
+			color: var(--text-normal);
+		}
+		.ai-optimize-no-suggestions {
+			color: var(--text-muted);
+			font-style: italic;
+		}
+	`;
+	document.head.appendChild(style);
+}
+
 export class TextOptimizationModal extends Modal {
 	result: OptimizationResult;
 	isPartial: boolean;
@@ -25,73 +184,37 @@ export class TextOptimizationModal extends Modal {
 	}
 
 	onOpen() {
+		// 注入样式
+		injectStyles();
+
 		const { contentEl } = this;
 		contentEl.empty();
 
-		// 设置模态框更大尺寸
-		this.modalEl.style.width = "90vw";
-		this.modalEl.style.maxWidth = "1200px";
-		this.modalEl.style.height = "90vh";
+		// 设置模态框更大尺寸 - 使用CSS类
+		this.modalEl.classList.add("ai-optimize-modal");
 
 		contentEl.createEl("h2", { text: this.isPartial ? "AI 文本优化（选中片段）" : "AI 文本优化（全文）" });
 
 		// 主容器 - 左右分栏
 		const mainContainer = contentEl.createDiv({ cls: "ai-optimize-container" });
-		mainContainer.style.display = "flex";
-		mainContainer.style.gap = "20px";
-		mainContainer.style.height = "calc(90vh - 180px)";
-		mainContainer.style.minHeight = "400px";
-		mainContainer.style.marginBottom = "20px";
 
 		// 左侧 - 优化后的文本（使用 Obsidian 的 Markdown 编辑器）
 		const leftPanel = mainContainer.createDiv({ cls: "ai-optimize-left" });
-		leftPanel.style.flex = "1";
-		leftPanel.style.display = "flex";
-		leftPanel.style.flexDirection = "column";
-		leftPanel.style.minWidth = "0";
-		leftPanel.style.overflow = "hidden";
 
 		// 标签栏容器
 		const tabHeader = leftPanel.createDiv({ cls: "ai-optimize-tab-header" });
-		tabHeader.style.display = "flex";
-		tabHeader.style.gap = "4px";
-		tabHeader.style.padding = "4px 4px 0 4px";
-		tabHeader.style.backgroundColor = "var(--background-secondary)";
-		tabHeader.style.borderBottom = "1px solid var(--background-modifier-border)";
-		tabHeader.style.marginBottom = "0";
-		tabHeader.style.borderRadius = "4px 4px 0 0";
 
 		// 源码模式标签
 		this.sourceTabBtn = tabHeader.createEl("button", {
 			text: "源码模式",
 			cls: "ai-optimize-tab ai-optimize-tab-active"
 		});
-		this.sourceTabBtn.style.padding = "6px 16px";
-		this.sourceTabBtn.style.border = "1px solid transparent";
-		this.sourceTabBtn.style.borderBottom = "none";
-		this.sourceTabBtn.style.borderRadius = "4px 4px 0 0";
-		this.sourceTabBtn.style.background = "var(--background-primary)";
-		this.sourceTabBtn.style.cursor = "pointer";
-		this.sourceTabBtn.style.color = "var(--text-normal)";
-		this.sourceTabBtn.style.fontWeight = "500";
-		this.sourceTabBtn.style.fontSize = "13px";
-		this.sourceTabBtn.style.transition = "all 0.15s ease";
 
 		// 阅读视图标签
 		this.previewTabBtn = tabHeader.createEl("button", {
 			text: "阅读视图",
 			cls: "ai-optimize-tab"
 		});
-		this.previewTabBtn.style.padding = "6px 16px";
-		this.previewTabBtn.style.border = "1px solid transparent";
-		this.previewTabBtn.style.borderBottom = "none";
-		this.previewTabBtn.style.borderRadius = "4px 4px 0 0";
-		this.previewTabBtn.style.background = "transparent";
-		this.previewTabBtn.style.cursor = "pointer";
-		this.previewTabBtn.style.color = "var(--text-muted)";
-		this.previewTabBtn.style.fontWeight = "400";
-		this.previewTabBtn.style.fontSize = "13px";
-		this.previewTabBtn.style.transition = "all 0.15s ease";
 
 		// 标签切换事件
 		this.sourceTabBtn.addEventListener("click", () => this.switchMode("source"));
@@ -102,60 +225,21 @@ export class TextOptimizationModal extends Modal {
 			text: "刷新",
 			cls: "ai-optimize-refresh-btn"
 		});
-		refreshBtn.style.marginLeft = "auto";
-		refreshBtn.style.padding = "4px 12px";
-		refreshBtn.style.fontSize = "12px";
-		refreshBtn.style.border = "1px solid var(--background-modifier-border)";
-		refreshBtn.style.borderRadius = "4px";
-		refreshBtn.style.background = "var(--background-primary)";
-		refreshBtn.style.color = "var(--text-muted)";
-		refreshBtn.style.cursor = "pointer";
-		refreshBtn.style.opacity = "0";
-		refreshBtn.style.pointerEvents = "none";
-		refreshBtn.style.transition = "all 0.15s ease";
 		refreshBtn.addEventListener("click", () => this.refreshPreview());
-		refreshBtn.addEventListener("mouseenter", () => {
-			refreshBtn.style.color = "var(--text-normal)";
-			refreshBtn.style.borderColor = "var(--interactive-accent)";
-		});
-		refreshBtn.addEventListener("mouseleave", () => {
-			refreshBtn.style.color = "var(--text-muted)";
-			refreshBtn.style.borderColor = "var(--background-modifier-border)";
-		});
 		this.refreshBtn = refreshBtn;
 
 		// 创建编辑器容器
 		const editorContainer = leftPanel.createDiv({ cls: "ai-optimize-editor" });
-		editorContainer.style.flex = "1";
-		editorContainer.style.border = "1px solid var(--background-modifier-border)";
-		editorContainer.style.borderTop = "none";
-		editorContainer.style.borderRadius = "0 0 4px 4px";
-		editorContainer.style.overflow = "auto";
-		editorContainer.style.backgroundColor = "var(--background-primary)";
 
 		// 源码模式编辑器 - 使用 contentEditable div
 		this.editorEl = editorContainer.createEl("div", { cls: "ai-optimize-editable" });
 		this.editorEl.contentEditable = "true";
-		this.editorEl.style.width = "100%";
-		this.editorEl.style.minHeight = "100%";
-		this.editorEl.style.padding = "12px";
-		this.editorEl.style.outline = "none";
-		this.editorEl.style.lineHeight = "1.6";
-		this.editorEl.style.whiteSpace = "pre-wrap";
-		this.editorEl.style.wordWrap = "break-word";
-		this.editorEl.style.fontFamily = "var(--font-mono)";
-		this.editorEl.style.fontSize = "var(--font-text-size)";
 		this.editorEl.textContent = this.editedText;
 
 		// 阅读视图容器 - 使用 MarkdownRenderer 渲染
 		this.previewEl = editorContainer.createEl("div", {
 			cls: "ai-optimize-preview markdown-rendered markdown-preview-view"
 		});
-		this.previewEl.style.width = "100%";
-		this.previewEl.style.minHeight = "100%";
-		this.previewEl.style.padding = "12px";
-		this.previewEl.style.display = "none";
-		this.previewEl.style.lineHeight = "1.6";
 
 		// 监听内容变化
 		this.editorEl.addEventListener("input", () => {
@@ -164,42 +248,21 @@ export class TextOptimizationModal extends Modal {
 
 		// 右侧 - 优化建议
 		const rightPanel = mainContainer.createDiv({ cls: "ai-optimize-right" });
-		rightPanel.style.width = "300px";
-		rightPanel.style.flexShrink = "0";
-		rightPanel.style.display = "flex";
-		rightPanel.style.flexDirection = "column";
-		rightPanel.style.overflow = "hidden";
 
 		const rightLabel = rightPanel.createEl("label", { text: "优化建议:" });
-		rightLabel.style.marginBottom = "8px";
-		rightLabel.style.fontWeight = "bold";
 
 		const suggestionContainer = rightPanel.createDiv({ cls: "ai-optimize-suggestions" });
-		suggestionContainer.style.flex = "1";
-		suggestionContainer.style.border = "1px solid var(--background-modifier-border)";
-		suggestionContainer.style.borderRadius = "4px";
-		suggestionContainer.style.padding = "12px";
-		suggestionContainer.style.backgroundColor = "var(--background-secondary)";
-		suggestionContainer.style.overflow = "auto";
-		suggestionContainer.style.fontSize = "13px";
-		suggestionContainer.style.lineHeight = "1.6";
 
 		// 解析并显示优化建议（按条目换行）
 		if (this.result.explanation) {
 			const suggestions = this.parseSuggestions(this.result.explanation);
 			if (suggestions.length > 0) {
-				suggestions.forEach((suggestion, index) => {
+				suggestions.forEach((suggestion) => {
 					const itemDiv = suggestionContainer.createEl("div", { cls: "ai-optimize-suggestion-item" });
-					itemDiv.style.marginBottom = "8px";
-					itemDiv.style.paddingBottom = "8px";
-					itemDiv.style.borderBottom = index < suggestions.length - 1 ? "1px solid var(--background-modifier-border)" : "none";
 
-					const bullet = itemDiv.createEl("span", { text: "• " });
-					bullet.style.color = "var(--interactive-accent)";
-					bullet.style.fontWeight = "bold";
+					const bullet = itemDiv.createEl("span", { text: "• ", cls: "ai-optimize-suggestion-bullet" });
 
-					const text = itemDiv.createEl("span", { text: suggestion });
-					text.style.color = "var(--text-normal)";
+					const text = itemDiv.createEl("span", { text: suggestion, cls: "ai-optimize-suggestion-text" });
 				});
 			} else {
 				suggestionContainer.createEl("div", {
@@ -249,42 +312,26 @@ export class TextOptimizationModal extends Modal {
 
 		if (mode === "source") {
 			// 切换到源码模式
-			this.editorEl.style.display = "block";
-			this.previewEl.style.display = "none";
+			this.editorEl.classList.remove("hidden");
+			this.previewEl.classList.remove("visible");
 
 			// 更新标签样式
-			this.sourceTabBtn.style.background = "var(--background-primary)";
-			this.sourceTabBtn.style.borderColor = "var(--background-modifier-border)";
-			this.sourceTabBtn.style.color = "var(--text-normal)";
-			this.sourceTabBtn.style.fontWeight = "500";
-
-			this.previewTabBtn.style.background = "transparent";
-			this.previewTabBtn.style.borderColor = "transparent";
-			this.previewTabBtn.style.color = "var(--text-muted)";
-			this.previewTabBtn.style.fontWeight = "400";
+			this.sourceTabBtn.classList.add("ai-optimize-tab-active");
+			this.previewTabBtn.classList.remove("ai-optimize-tab-active");
 
 			// 隐藏刷新按钮
-			this.refreshBtn.style.opacity = "0";
-			this.refreshBtn.style.pointerEvents = "none";
+			this.refreshBtn.classList.remove("visible");
 		} else {
 			// 切换到阅读视图
-			this.editorEl.style.display = "none";
-			this.previewEl.style.display = "block";
+			this.editorEl.classList.add("hidden");
+			this.previewEl.classList.add("visible");
 
 			// 更新标签样式
-			this.previewTabBtn.style.background = "var(--background-primary)";
-			this.previewTabBtn.style.borderColor = "var(--background-modifier-border)";
-			this.previewTabBtn.style.color = "var(--text-normal)";
-			this.previewTabBtn.style.fontWeight = "500";
-
-			this.sourceTabBtn.style.background = "transparent";
-			this.sourceTabBtn.style.borderColor = "transparent";
-			this.sourceTabBtn.style.color = "var(--text-muted)";
-			this.sourceTabBtn.style.fontWeight = "400";
+			this.previewTabBtn.classList.add("ai-optimize-tab-active");
+			this.sourceTabBtn.classList.remove("ai-optimize-tab-active");
 
 			// 显示刷新按钮
-			this.refreshBtn.style.opacity = "1";
-			this.refreshBtn.style.pointerEvents = "auto";
+			this.refreshBtn.classList.add("visible");
 
 			// 同步最新内容并渲染
 			await this.refreshPreview();
@@ -300,7 +347,8 @@ export class TextOptimizationModal extends Modal {
 
 		// 清空预览区域并重新渲染
 		this.previewEl.empty();
-		await MarkdownRenderer.renderMarkdown(
+		await MarkdownRenderer.render(
+			this.app,
 			this.editedText,
 			this.previewEl,
 			"",
@@ -316,7 +364,7 @@ export class TextOptimizationModal extends Modal {
 
 		// 尝试多种分隔方式
 		// 1. 按数字序号分割 (1. 2. 3. 或 1、2、3、)
-		let suggestions = explanation.split(/\d+[\.、]\s*/).filter(s => s.trim());
+		let suggestions = explanation.split(/\d+[.、]\s*/).filter(s => s.trim());
 
 		// 2. 如果没有数字序号，尝试按换行分割
 		if (suggestions.length <= 1) {
@@ -325,7 +373,7 @@ export class TextOptimizationModal extends Modal {
 
 		// 3. 如果还是没有，尝试按中文分号或逗号分割
 		if (suggestions.length <= 1) {
-			suggestions = explanation.split(/[；;]/).filter(s => s.trim());
+			suggestions = explanation.split(/[;；]/).filter(s => s.trim());
 		}
 
 		return suggestions.map(s => s.trim()).filter(s => s.length > 0);

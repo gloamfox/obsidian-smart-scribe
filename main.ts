@@ -1,14 +1,12 @@
 import {
-	App,
 	Editor,
 	MarkdownView,
-	Modal,
 	Notice,
 	Plugin,
 	TFile,
 	TFolder,
 } from "obsidian";
-import { AnalysisResult, OptimizationResult, AIPlatform, PLATFORM_DEFAULTS, createAIProvider, AIProviderConfig } from "./src/ai-provider";
+import { AnalysisResult, AIPlatform, PLATFORM_DEFAULTS, createAIProvider, AIProviderConfig } from "./src/ai-provider";
 import { VaultScanner } from "./src/vault-scanner";
 import { AIMetadataSettings, DEFAULT_SETTINGS } from "./src/settings";
 import { AIMetadataSettingTab } from "./src/ui/setting-tab";
@@ -32,9 +30,15 @@ export default class AIMetadataPlugin extends Plugin {
 		// 使用 Obsidian API 获取标签
 		this.vaultScanner = new VaultScanner(
 			this.app.vault,
-			() => (this.app.metadataCache as any).getTags(),
+			() => {
+				const cache = this.app.metadataCache as unknown as { getTags(): Record<string, number> };
+				return cache.getTags();
+			},
 			(file) => this.app.metadataCache.getFileCache(file),
-			() => (this.app.metadataCache as any).getCachedFiles()
+			() => {
+				const cache = this.app.metadataCache as unknown as { getCachedFiles(): string[] };
+				return cache.getCachedFiles();
+			}
 		);
 
 		// 添加状态栏项
@@ -164,12 +168,9 @@ export default class AIMetadataPlugin extends Plugin {
 
 		// 添加设置面板
 		this.addSettingTab(new AIMetadataSettingTab(this.app, this));
-
-		console.log("AI Metadata Generator 插件已加载");
 	}
 
 	onunload() {
-		console.log("AI Metadata Generator 插件已卸载");
 	}
 
 	async loadSettings() {
@@ -377,17 +378,16 @@ export default class AIMetadataPlugin extends Plugin {
 			this.updateStatusBar("预览中", false);
 
 			// 显示预览模态框
-			new MetadataPreviewModal(this.app, result, async (confirmed, editedResult) => {
+			new MetadataPreviewModal(this.app, result, (confirmed, editedResult) => {
 				if (confirmed && editedResult) {
-					try {
-						await this.applyMetadata(file, content, editedResult);
+					this.applyMetadata(file, content, editedResult).then(() => {
 						this.updateStatusBar("已应用");
 						new Notice(`笔记属性已应用！\n标题: ${editedResult.title}\n标签: ${editedResult.tags.join(", ")}\n关键词: ${editedResult.keywords?.join(", ") || "无"}`);
-					} catch (error) {
+					}).catch((error) => {
 						console.error("应用笔记属性失败:", error);
 						this.updateStatusBar("应用失败");
 						new Notice(`应用失败: ${error.message}`);
-					}
+					});
 				} else {
 					this.updateStatusBar("已取消");
 				}
@@ -399,7 +399,7 @@ export default class AIMetadataPlugin extends Plugin {
 		}
 	}
 
-	async updateMetadata(file: TFile | null) {
+	updateMetadata(file: TFile | null) {
 		if (!file) {
 			new Notice("请先打开一个文件");
 			return;
@@ -449,7 +449,8 @@ export default class AIMetadataPlugin extends Plugin {
 				dateStr = `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
 			}
 		}
-		safeResult.date = dateStr;
+		
+		safeResult.date = typeof dateStr === 'string' ? dateStr : undefined;
 
 		const newFrontmatter = this.buildFrontmatter(safeResult);
 		const cleanContent = this.extractContentWithoutFrontmatter(originalContent);
@@ -517,12 +518,12 @@ export default class AIMetadataPlugin extends Plugin {
 		return content.trim();
 	}
 
-	private extractFrontmatter(content: string): Record<string, any> {
+	private extractFrontmatter(content: string): Record<string, unknown> {
 		const match = content.match(/^---\s*\n([\s\S]*?)\n---/);
 		if (!match) return {};
 
 		const yaml = match[1];
-		const result: Record<string, any> = {};
+		const result: Record<string, unknown> = {};
 
 		const lines = yaml.split("\n");
 		let currentKey = "";
@@ -549,7 +550,8 @@ export default class AIMetadataPlugin extends Plugin {
 				}
 			} else if (trimmed.startsWith("-") && inArray && currentKey) {
 				const value = trimmed.slice(1).trim();
-				result[currentKey].push(value.replace(/^["']|["']$/g, ""));
+				const arr = result[currentKey] as string[];
+				arr.push(value.replace(/^["']|["']$/g, ""));
 			} else if (trimmed === "" || colonIndex > 0) {
 				inArray = false;
 			}
@@ -558,7 +560,7 @@ export default class AIMetadataPlugin extends Plugin {
 		return result;
 	}
 
-	private normalizeTags(tags: any): string[] {
+	private normalizeTags(tags: unknown): string[] {
 		if (Array.isArray(tags)) {
 			return tags
 				.map((t) => String(t).trim())
@@ -573,7 +575,7 @@ export default class AIMetadataPlugin extends Plugin {
 		return [];
 	}
 
-	async batchGenerateMetadata(folder: TFolder) {
+	batchGenerateMetadata(folder: TFolder) {
 		// 获取文件夹下所有 markdown 文件
 		const files: TFile[] = [];
 		const collectFiles = (f: TFolder) => {
@@ -593,7 +595,7 @@ export default class AIMetadataPlugin extends Plugin {
 		}
 
 		// 显示确认对话框
-		new BatchConfirmModal(this.app, files.length, async (confirmed) => {
+		new BatchConfirmModal(this.app, files.length, (confirmed) => {
 			if (!confirmed) return;
 
 			let successCount = 0;
@@ -601,20 +603,24 @@ export default class AIMetadataPlugin extends Plugin {
 
 			this.updateStatusBar(`批量处理中: 0/${files.length}`, false);
 
-			for (let i = 0; i < files.length; i++) {
-				const file = files[i];
-				try {
-					await this.generateMetadata(file);
-					successCount++;
-				} catch (error) {
-					console.error(`处理文件 ${file.path} 失败:`, error);
-					failCount++;
+			const processFiles = async () => {
+				for (let i = 0; i < files.length; i++) {
+					const file = files[i];
+					try {
+						await this.generateMetadata(file);
+						successCount++;
+					} catch (error) {
+						console.error(`处理文件 ${file.path} 失败:`, error);
+						failCount++;
+					}
+					this.updateStatusBar(`批量处理中: ${i + 1}/${files.length}`, false);
 				}
-				this.updateStatusBar(`批量处理中: ${i + 1}/${files.length}`, false);
-			}
 
-			this.updateStatusBar("批量处理完成");
-			new Notice(`批量处理完成！成功: ${successCount}, 失败: ${failCount}`);
+				this.updateStatusBar("批量处理完成");
+				new Notice(`批量处理完成！成功: ${successCount}, 失败: ${failCount}`);
+			};
+
+			processFiles();
 		}).open();
 	}
 
@@ -642,7 +648,7 @@ export default class AIMetadataPlugin extends Plugin {
 
 			if (this.settings.showOptimizePreview) {
 				this.updateStatusBar("预览中", false);
-				new TextOptimizationModal(this.app, result, isPartial, async (confirmed, editedText) => {
+				new TextOptimizationModal(this.app, result, isPartial, (confirmed, editedText) => {
 					if (confirmed && editedText) {
 						if (isPartial) {
 							editor.replaceSelection(editedText);
@@ -695,7 +701,7 @@ export default class AIMetadataPlugin extends Plugin {
 			const result = await provider.optimize(contentToOptimize, isPartial);
 
 			this.updateStatusBar("预览中", false);
-			new TextOptimizationModal(this.app, result, isPartial, async (confirmed, editedText) => {
+			new TextOptimizationModal(this.app, result, isPartial, (confirmed, editedText) => {
 				if (confirmed && editedText) {
 					if (isPartial) {
 						editor.replaceSelection(editedText);

@@ -1,3 +1,5 @@
+import { requestUrl } from "obsidian";
+
 export interface AnalysisResult {
 	title: string;
 	tags: string[];
@@ -164,7 +166,7 @@ function parseOptimizationResponse(response: string): OptimizationResult {
 			optimizedText: response.trim(),
 			explanation: "",
 		};
-	} catch (error) {
+	} catch {
 		// 解析失败，返回原始响应
 		return {
 			optimizedText: response.trim(),
@@ -230,7 +232,8 @@ export class ClaudeProvider implements AIProvider {
 	async analyze(content: string, existingTags: string[] = [], existingCategories: string[] = []): Promise<AnalysisResult> {
 		const systemPrompt = buildSystemPrompt(existingTags, existingCategories);
 
-		const response = await fetch(`${this.config.baseUrl || PLATFORM_DEFAULTS.claude.baseUrl}/v1/messages`, {
+		const response = await requestUrl({
+			url: `${this.config.baseUrl || PLATFORM_DEFAULTS.claude.baseUrl}/v1/messages`,
 			method: "POST",
 			headers: {
 				"Content-Type": "application/json",
@@ -250,15 +253,14 @@ export class ClaudeProvider implements AIProvider {
 			}),
 		});
 
-		if (!response.ok) {
-			const error = await response.text();
-			throw new Error(`Claude API 请求失败: ${response.status} ${error}`);
+		if (response.status !== 200) {
+			throw new Error(`Claude API 请求失败: ${response.status} ${response.text}`);
 		}
 
-		const data = await response.json();
+		const data = response.json;
 		const textContent = data.content
-			.filter((block: any) => block.type === "text")
-			.map((block: any) => block.text)
+			.filter((block: { type: string }) => block.type === "text")
+			.map((block: { text: string }) => block.text)
 			.join("");
 
 		return parseResponse(textContent);
@@ -267,7 +269,8 @@ export class ClaudeProvider implements AIProvider {
 	async optimize(content: string, isPartial: boolean = false): Promise<OptimizationResult> {
 		const systemPrompt = buildOptimizePrompt(isPartial);
 
-		const response = await fetch(`${this.config.baseUrl || PLATFORM_DEFAULTS.claude.baseUrl}/v1/messages`, {
+		const response = await requestUrl({
+			url: `${this.config.baseUrl || PLATFORM_DEFAULTS.claude.baseUrl}/v1/messages`,
 			method: "POST",
 			headers: {
 				"Content-Type": "application/json",
@@ -287,15 +290,14 @@ export class ClaudeProvider implements AIProvider {
 			}),
 		});
 
-		if (!response.ok) {
-			const error = await response.text();
-			throw new Error(`Claude API 请求失败: ${response.status} ${error}`);
+		if (response.status !== 200) {
+			throw new Error(`Claude API 请求失败: ${response.status} ${response.text}`);
 		}
 
-		const data = await response.json();
+		const data = response.json;
 		const textContent = data.content
-			.filter((block: any) => block.type === "text")
-			.map((block: any) => block.text)
+			.filter((block: { type: string }) => block.type === "text")
+			.map((block: { text: string }) => block.text)
 			.join("");
 
 		return parseOptimizationResponse(textContent);
@@ -316,7 +318,8 @@ export class OpenAICompatibleProvider implements AIProvider {
 		const systemPrompt = buildSystemPrompt(existingTags, existingCategories);
 		const baseUrl = this.config.baseUrl || PLATFORM_DEFAULTS[this.platform].baseUrl;
 
-		const response = await fetch(`${baseUrl}/chat/completions`, {
+		const response = await requestUrl({
+			url: `${baseUrl}/chat/completions`,
 			method: "POST",
 			headers: {
 				"Content-Type": "application/json",
@@ -333,12 +336,11 @@ export class OpenAICompatibleProvider implements AIProvider {
 			}),
 		});
 
-		if (!response.ok) {
-			const error = await response.text();
-			throw new Error(`${PLATFORM_DEFAULTS[this.platform].name} API 请求失败: ${response.status} ${error}`);
+		if (response.status !== 200) {
+			throw new Error(`${PLATFORM_DEFAULTS[this.platform].name} API 请求失败: ${response.status} ${response.text}`);
 		}
 
-		const data = await response.json();
+		const data = response.json;
 		const textContent = data.choices?.[0]?.message?.content || "";
 
 		return parseResponse(textContent);
@@ -348,7 +350,8 @@ export class OpenAICompatibleProvider implements AIProvider {
 		const systemPrompt = buildOptimizePrompt(isPartial);
 		const baseUrl = this.config.baseUrl || PLATFORM_DEFAULTS[this.platform].baseUrl;
 
-		const response = await fetch(`${baseUrl}/chat/completions`, {
+		const response = await requestUrl({
+			url: `${baseUrl}/chat/completions`,
 			method: "POST",
 			headers: {
 				"Content-Type": "application/json",
@@ -365,12 +368,11 @@ export class OpenAICompatibleProvider implements AIProvider {
 			}),
 		});
 
-		if (!response.ok) {
-			const error = await response.text();
-			throw new Error(`${PLATFORM_DEFAULTS[this.platform].name} API 请求失败: ${response.status} ${error}`);
+		if (response.status !== 200) {
+			throw new Error(`${PLATFORM_DEFAULTS[this.platform].name} API 请求失败: ${response.status} ${response.text}`);
 		}
 
-		const data = await response.json();
+		const data = response.json;
 		const textContent = data.choices?.[0]?.message?.content || "";
 
 		return parseOptimizationResponse(textContent);
@@ -389,6 +391,6 @@ export function createAIProvider(platform: AIPlatform, config: AIProviderConfig)
 		case "spark":
 			return new OpenAICompatibleProvider(platform, config);
 		default:
-			throw new Error(`不支持的 AI 平台: ${platform}`);
+			throw new Error(`不支持的 AI 平台: ${String(platform)}`);
 	}
 }
