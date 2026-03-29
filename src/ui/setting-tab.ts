@@ -17,106 +17,69 @@ export class AIMetadataSettingTab extends PluginSettingTab {
 
 		// 创建 Tab 导航 - 参考 Enveloppe 风格
 		const tabBar = containerEl.createEl("nav", { cls: "ai-settings-tab-bar" });
-		tabBar.style.display = "flex";
-		tabBar.style.flexDirection = "row";
-		tabBar.style.gap = "4px";
-		tabBar.style.overflow = "hidden";
-		tabBar.style.padding = "0";
-		tabBar.style.marginBottom = "20px";
-		tabBar.style.borderBottom = "1px solid var(--background-modifier-border)";
 
 		// AI 模型配置 Tab
 		const modelTab = tabBar.createEl("div", {
-			cls: "ai-settings-tab" + (this.activeTab === "model" ? " ai-settings-tab-active" : ""),
+			cls: "ai-settings-tab" + (this.activeTab === "model" ? " ai-settings-tab-active" : " ai-settings-tab-inactive"),
 		});
-		modelTab.style.padding = "10px 20px";
-		modelTab.style.border = "1px solid var(--background-modifier-border)";
-		modelTab.style.borderRadius = "5px";
-		modelTab.style.cursor = "pointer";
-		modelTab.style.transition = "all 0.15s ease";
-		modelTab.style.display = "flex";
-		modelTab.style.flexDirection = "column";
-		modelTab.style.alignItems = "center";
-		modelTab.style.gap = "4px";
 
 		// 图标
 		const modelIcon = modelTab.createEl("div", { cls: "ai-settings-tab-icon" });
 		modelIcon.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>`;
-		modelIcon.style.textAlign = "center";
 
 		// 文字
 		const modelName = modelTab.createEl("div", {
 			cls: "ai-settings-tab-name",
 			text: "AI 模型配置"
 		});
-		modelName.style.fontWeight = "bold";
-		modelName.style.textAlign = "center";
-		modelName.style.fontSize = "13px";
 
 		// 插件功能配置 Tab
 		const featureTab = tabBar.createEl("div", {
-			cls: "ai-settings-tab" + (this.activeTab === "feature" ? " ai-settings-tab-active" : ""),
+			cls: "ai-settings-tab" + (this.activeTab === "feature" ? " ai-settings-tab-active" : " ai-settings-tab-inactive"),
 		});
-		featureTab.style.padding = "10px 20px";
-		featureTab.style.border = "1px solid var(--background-modifier-border)";
-		featureTab.style.borderRadius = "5px";
-		featureTab.style.cursor = "pointer";
-		featureTab.style.transition = "all 0.15s ease";
-		featureTab.style.display = "flex";
-		featureTab.style.flexDirection = "column";
-		featureTab.style.alignItems = "center";
-		featureTab.style.gap = "4px";
 
 		// 图标
 		const featureIcon = featureTab.createEl("div", { cls: "ai-settings-tab-icon" });
 		featureIcon.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>`;
-		featureIcon.style.textAlign = "center";
 
 		// 文字
 		const featureName = featureTab.createEl("div", {
 			cls: "ai-settings-tab-name",
 			text: "插件功能配置"
 		});
-		featureName.style.fontWeight = "bold";
-		featureName.style.textAlign = "center";
-		featureName.style.fontSize = "13px";
 
 		// 设置选中状态样式
 		if (this.activeTab === "model") {
-			modelTab.style.backgroundColor = "var(--interactive-accent)";
-			modelTab.style.color = "var(--text-on-accent)";
-			modelTab.style.border = "0";
-			modelTab.style.borderBottomLeftRadius = "0";
-			modelTab.style.borderBottomRightRadius = "0";
+			modelTab.classList.add("ai-settings-tab-active");
+			modelTab.classList.remove("ai-settings-tab-inactive");
+			featureTab.classList.add("ai-settings-tab-inactive");
+			featureTab.classList.remove("ai-settings-tab-active");
 		} else {
-			modelTab.style.backgroundColor = "transparent";
-			modelTab.style.color = "var(--text-normal)";
-			// hover 效果
-			modelTab.addEventListener("mouseenter", () => {
-				modelTab.style.backgroundColor = "var(--background-modifier-hover)";
-			});
-			modelTab.addEventListener("mouseleave", () => {
-				modelTab.style.backgroundColor = "transparent";
-			});
+			featureTab.classList.add("ai-settings-tab-active");
+			featureTab.classList.remove("ai-settings-tab-inactive");
+			modelTab.classList.add("ai-settings-tab-inactive");
+			modelTab.classList.remove("ai-settings-tab-active");
 		}
 
-		if (this.activeTab === "feature") {
-			featureTab.style.backgroundColor = "var(--interactive-accent)";
-			featureTab.style.color = "var(--text-on-accent)";
-			featureTab.style.border = "0";
-			featureTab.style.borderBottomLeftRadius = "0";
-			featureTab.style.borderBottomRightRadius = "0";
-		} else {
-			featureTab.style.backgroundColor = "transparent";
-			featureTab.style.color = "var(--text-normal)";
-			// hover 效果
-			featureTab.addEventListener("mouseenter", () => {
-				featureTab.style.backgroundColor = "var(--background-modifier-hover)";
-			});
-			featureTab.addEventListener("mouseleave", () => {
-				featureTab.style.backgroundColor = "transparent";
-			});
-		}
+		// hover 效果
+		modelTab.addEventListener("mouseenter", () => {
+			if (this.activeTab !== "model") {
+				modelTab.classList.add("ai-settings-tab-hover");
+			}
+		});
+		modelTab.addEventListener("mouseleave", () => {
+			modelTab.classList.remove("ai-settings-tab-hover");
+		});
+
+		// hover 效果
+		featureTab.addEventListener("mouseenter", () => {
+			if (this.activeTab !== "feature") {
+				featureTab.classList.add("ai-settings-tab-hover");
+			}
+		});
+		featureTab.addEventListener("mouseleave", () => {
+			featureTab.classList.remove("ai-settings-tab-hover");
+		});
 
 		// Tab 切换事件
 		modelTab.addEventListener("click", () => {
@@ -161,7 +124,9 @@ export class AIMetadataSettingTab extends PluginSettingTab {
 		const platformConfig = this.plugin.settings.platforms[currentPlatform];
 		const platformDefaults = PLATFORM_DEFAULTS[currentPlatform];
 
-		containerEl.createEl("h3", { text: `${platformDefaults.name} 配置` });
+		new Setting(containerEl)
+			.setName(`${platformDefaults.name} 配置`)
+			.setHeading();
 
 		// API Key
 		new Setting(containerEl)
@@ -241,7 +206,9 @@ export class AIMetadataSettingTab extends PluginSettingTab {
 
 	displayFeatureSettings(containerEl: HTMLElement): void {
 		// 笔记属性
-		containerEl.createEl("h3", { text: "笔记属性设置" });
+		new Setting(containerEl)
+			.setName("笔记属性设置")
+			.setHeading();
 
 		// Max Tags
 		new Setting(containerEl)
@@ -299,7 +266,9 @@ export class AIMetadataSettingTab extends PluginSettingTab {
 			);
 
 		// 文本优化设置
-		containerEl.createEl("h3", { text: "文本优化设置" });
+		new Setting(containerEl)
+			.setName("文本优化设置")
+			.setHeading();
 
 		// Show Optimize Preview
 		new Setting(containerEl)

@@ -1,4 +1,4 @@
-import { TFile, TFolder, Vault, CachedMetadata, TagCache } from "obsidian";
+import { TFile, TFolder, Vault, CachedMetadata } from "obsidian";
 
 export interface VaultMetadata {
 	tags: Map<string, number>; // tag -> usage count
@@ -148,7 +148,7 @@ export class VaultScanner {
 		const contentLower = content.toLowerCase();
 		const scores = new Map<string, number>();
 
-		for (const [tag, _count] of existingTags) {
+		for (const [tag, count] of existingTags) {
 			let score = 0;
 			const tagLower = tag.toLowerCase();
 

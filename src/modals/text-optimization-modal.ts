@@ -1,165 +1,6 @@
 import { App, Component, MarkdownRenderer, Modal } from "obsidian";
 import type { OptimizationResult } from "../ai-provider";
 
-// 注入 CSS 样式
-const STYLE_ID = "ai-optimize-modal-styles";
-function injectStyles() {
-	if (document.getElementById(STYLE_ID)) return;
-
-	const style = document.createElement("style");
-	style.id = STYLE_ID;
-	style.textContent = `
-		.ai-optimize-modal {
-			width: 90vw !important;
-			max-width: 1200px !important;
-			height: 90vh !important;
-		}
-		.ai-optimize-modal .modal-content {
-			height: 100%;
-			display: flex;
-			flex-direction: column;
-		}
-		.ai-optimize-container {
-			display: flex;
-			gap: 20px;
-			height: calc(90vh - 180px);
-			min-height: 400px;
-			margin-bottom: 20px;
-		}
-		.ai-optimize-left {
-			flex: 1;
-			display: flex;
-			flex-direction: column;
-			min-width: 0;
-			overflow: hidden;
-		}
-		.ai-optimize-tab-header {
-			display: flex;
-			gap: 4px;
-			padding: 4px 4px 0 4px;
-			background-color: var(--background-secondary);
-			border-bottom: 1px solid var(--background-modifier-border);
-			margin-bottom: 0;
-			border-radius: 4px 4px 0 0;
-		}
-		.ai-optimize-tab {
-			padding: 6px 16px;
-			border: 1px solid transparent;
-			border-bottom: none;
-			border-radius: 4px 4px 0 0;
-			background: transparent;
-			cursor: pointer;
-			color: var(--text-muted);
-			font-weight: 400;
-			font-size: 13px;
-			transition: all 0.15s ease;
-		}
-		.ai-optimize-tab-active {
-			background: var(--background-primary) !important;
-			border-color: var(--background-modifier-border) !important;
-			color: var(--text-normal) !important;
-			font-weight: 500 !important;
-		}
-		.ai-optimize-refresh-btn {
-			margin-left: auto;
-			padding: 4px 12px;
-			font-size: 12px;
-			border: 1px solid var(--background-modifier-border);
-			border-radius: 4px;
-			background: var(--background-primary);
-			color: var(--text-muted);
-			cursor: pointer;
-			opacity: 0;
-			pointer-events: none;
-			transition: all 0.15s ease;
-		}
-		.ai-optimize-refresh-btn.visible {
-			opacity: 1;
-			pointer-events: auto;
-		}
-		.ai-optimize-refresh-btn:hover {
-			color: var(--text-normal);
-			border-color: var(--interactive-accent);
-		}
-		.ai-optimize-editor {
-			flex: 1;
-			border: 1px solid var(--background-modifier-border);
-			border-top: none;
-			border-radius: 0 0 4px 4px;
-			overflow: auto;
-			background-color: var(--background-primary);
-			position: relative;
-		}
-		.ai-optimize-editable {
-			width: 100%;
-			min-height: 100%;
-			padding: 12px;
-			outline: none;
-			line-height: 1.6;
-			white-space: pre-wrap;
-			overflow-wrap: break-word;
-			font-family: var(--font-mono);
-			font-size: var(--font-text-size);
-		}
-		.ai-optimize-editable.hidden {
-			display: none !important;
-		}
-		.ai-optimize-preview {
-			width: 100%;
-			min-height: 100%;
-			padding: 12px;
-			display: none;
-			line-height: 1.6;
-		}
-		.ai-optimize-preview.visible {
-			display: block !important;
-		}
-		.ai-optimize-right {
-			width: 300px;
-			flex-shrink: 0;
-			display: flex;
-			flex-direction: column;
-			overflow: hidden;
-		}
-		.ai-optimize-right > label {
-			margin-bottom: 8px;
-			font-weight: bold;
-		}
-		.ai-optimize-suggestions {
-			flex: 1;
-			border: 1px solid var(--background-modifier-border);
-			border-radius: 4px;
-			padding: 12px;
-			background-color: var(--background-secondary);
-			overflow: auto;
-			font-size: 13px;
-			line-height: 1.6;
-		}
-		.ai-optimize-suggestion-item {
-			margin-bottom: 8px;
-			padding-bottom: 8px;
-			border-bottom: 1px solid var(--background-modifier-border);
-		}
-		.ai-optimize-suggestion-item:last-child {
-			border-bottom: none;
-			margin-bottom: 0;
-			padding-bottom: 0;
-		}
-		.ai-optimize-suggestion-bullet {
-			color: var(--interactive-accent);
-			font-weight: bold;
-		}
-		.ai-optimize-suggestion-text {
-			color: var(--text-normal);
-		}
-		.ai-optimize-no-suggestions {
-			color: var(--text-muted);
-			font-style: italic;
-		}
-	`;
-	document.head.appendChild(style);
-}
-
 export class TextOptimizationModal extends Modal {
 	result: OptimizationResult;
 	isPartial: boolean;
@@ -184,9 +25,6 @@ export class TextOptimizationModal extends Modal {
 	}
 
 	onOpen() {
-		// 注入样式
-		injectStyles();
-
 		const { contentEl } = this;
 		contentEl.empty();
 
@@ -217,15 +55,15 @@ export class TextOptimizationModal extends Modal {
 		});
 
 		// 标签切换事件
-		this.sourceTabBtn.addEventListener("click", () => this.switchMode("source"));
-		this.previewTabBtn.addEventListener("click", () => this.switchMode("preview"));
+		this.sourceTabBtn.addEventListener("click", () => void this.switchMode("source"));
+		this.previewTabBtn.addEventListener("click", () => void this.switchMode("preview"));
 
 		// 刷新按钮（仅在阅读视图显示）
 		const refreshBtn = tabHeader.createEl("button", {
 			text: "刷新",
 			cls: "ai-optimize-refresh-btn"
 		});
-		refreshBtn.addEventListener("click", () => this.refreshPreview());
+		refreshBtn.addEventListener("click", () => void this.refreshPreview());
 		this.refreshBtn = refreshBtn;
 
 		// 创建编辑器容器
@@ -249,8 +87,6 @@ export class TextOptimizationModal extends Modal {
 		// 右侧 - 优化建议
 		const rightPanel = mainContainer.createDiv({ cls: "ai-optimize-right" });
 
-		const rightLabel = rightPanel.createEl("label", { text: "优化建议:" });
-
 		const suggestionContainer = rightPanel.createDiv({ cls: "ai-optimize-suggestions" });
 
 		// 解析并显示优化建议（按条目换行）
@@ -260,9 +96,9 @@ export class TextOptimizationModal extends Modal {
 				suggestions.forEach((suggestion) => {
 					const itemDiv = suggestionContainer.createEl("div", { cls: "ai-optimize-suggestion-item" });
 
-					const bullet = itemDiv.createEl("span", { text: "• ", cls: "ai-optimize-suggestion-bullet" });
+					itemDiv.createEl("span", { text: "• ", cls: "ai-optimize-suggestion-bullet" });
 
-					const text = itemDiv.createEl("span", { text: suggestion, cls: "ai-optimize-suggestion-text" });
+					itemDiv.createEl("span", { text: suggestion, cls: "ai-optimize-suggestion-text" });
 				});
 			} else {
 				suggestionContainer.createEl("div", {

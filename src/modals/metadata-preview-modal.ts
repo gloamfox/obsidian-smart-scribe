@@ -33,8 +33,8 @@ export class MetadataPreviewModal extends Modal {
 		const titleInput = titleContainer.createEl("input", {
 			type: "text",
 			value: this.editedResult.title,
+			cls: "ai-metadata-input ai-metadata-input-full",
 		});
-		titleInput.style.width = "100%";
 		titleInput.addEventListener("input", (e) => {
 			this.editedResult.title = (e.target as HTMLInputElement).value;
 		});
@@ -45,8 +45,8 @@ export class MetadataPreviewModal extends Modal {
 		const tagsInput = tagsContainer.createEl("input", {
 			type: "text",
 			value: this.editedResult.tags.join(", "),
+			cls: "ai-metadata-input ai-metadata-input-full",
 		});
-		tagsInput.style.width = "100%";
 		tagsInput.addEventListener("input", (e) => {
 			const value = (e.target as HTMLInputElement).value;
 			this.editedResult.tags = value
@@ -61,8 +61,8 @@ export class MetadataPreviewModal extends Modal {
 		const categoryInput = categoryContainer.createEl("input", {
 			type: "text",
 			value: this.editedResult.category,
+			cls: "ai-metadata-input ai-metadata-input-full",
 		});
-		categoryInput.style.width = "100%";
 		categoryInput.addEventListener("input", (e) => {
 			this.editedResult.category = (e.target as HTMLInputElement).value;
 		});
@@ -70,10 +70,10 @@ export class MetadataPreviewModal extends Modal {
 		// 摘要
 		const summaryContainer = contentEl.createDiv();
 		summaryContainer.createEl("label", { text: "摘要:" });
-		const summaryInput = summaryContainer.createEl("textarea");
+		const summaryInput = summaryContainer.createEl("textarea", {
+			cls: "ai-metadata-textarea ai-metadata-textarea-full",
+		});
 		summaryInput.value = this.editedResult.summary;
-		summaryInput.style.width = "100%";
-		summaryInput.style.height = "100px";
 		summaryInput.addEventListener("input", (e) => {
 			this.editedResult.summary = (e.target as HTMLTextAreaElement).value;
 		});
@@ -84,8 +84,8 @@ export class MetadataPreviewModal extends Modal {
 		const keywordsInput = keywordsContainer.createEl("input", {
 			type: "text",
 			value: this.editedResult.keywords?.join(", ") || "",
+			cls: "ai-metadata-input ai-metadata-input-full",
 		});
-		keywordsInput.style.width = "100%";
 		keywordsInput.addEventListener("input", (e) => {
 			const value = (e.target as HTMLInputElement).value;
 			this.editedResult.keywords = value
@@ -95,11 +95,8 @@ export class MetadataPreviewModal extends Modal {
 		});
 
 		// 分享选项
-		const shareContainer = contentEl.createDiv({ cls: "ai-metadata-share" });
-		shareContainer.style.marginTop = "20px";
-		shareContainer.style.marginBottom = "20px";
-		const shareLabel = shareContainer.createEl("label", { text: "允许分享: " });
-		shareLabel.style.marginRight = "10px";
+		const shareContainer = contentEl.createDiv({ cls: "ai-metadata-share ai-metadata-share-container" });
+		const shareLabel = shareContainer.createEl("label", { text: "允许分享: ", cls: "ai-metadata-share-label" });
 		const shareCheckbox = shareContainer.createEl("input", {
 			type: "checkbox",
 		});

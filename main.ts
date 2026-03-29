@@ -620,7 +620,7 @@ export default class AIMetadataPlugin extends Plugin {
 				new Notice(`批量处理完成！成功: ${successCount}, 失败: ${failCount}`);
 			};
 
-			processFiles();
+			void processFiles();
 		}).open();
 	}
 
