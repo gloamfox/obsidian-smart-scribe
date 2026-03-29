@@ -96,7 +96,7 @@ export class MetadataPreviewModal extends Modal {
 
 		// 分享选项
 		const shareContainer = contentEl.createDiv({ cls: "ai-metadata-share ai-metadata-share-container" });
-		const shareLabel = shareContainer.createEl("label", { text: "允许分享: ", cls: "ai-metadata-share-label" });
+		shareContainer.createEl("label", { text: "允许分享: ", cls: "ai-metadata-share-label" });
 		const shareCheckbox = shareContainer.createEl("input", {
 			type: "checkbox",
 		});

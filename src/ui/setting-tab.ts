@@ -41,7 +41,7 @@ export class AIMetadataSettingTab extends PluginSettingTab {
 		modelSvg.createSvg("path", { attr: { d: "M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" } });
 
 		// 文字
-		const modelName = modelTab.createEl("div", {
+		modelTab.createEl("div", {
 			cls: "ai-settings-tab-name",
 			text: "AI 模型配置"
 		});
@@ -70,7 +70,7 @@ export class AIMetadataSettingTab extends PluginSettingTab {
 		featureSvg.createSvg("path", { attr: { d: "M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" } });
 
 		// 文字
-		const featureName = featureTab.createEl("div", {
+		featureTab.createEl("div", {
 			cls: "ai-settings-tab-name",
 			text: "插件功能配置"
 		});
@@ -157,12 +157,12 @@ export class AIMetadataSettingTab extends PluginSettingTab {
 
 		// API Key
 		new Setting(containerEl)
-			.setName("API Key")
-			.setDesc(`${platformDefaults.name} 的 API Key`)
+			.setName("API key")
+			.setDesc(`${platformDefaults.name} 的 API key`)
 			.addText((text) => {
 				text.inputEl.type = "password";
 				text
-					.setPlaceholder("输入 API Key...")
+					.setPlaceholder("输入 API key...")
 					.setValue(platformConfig.apiKey)
 					.onChange(async (value) => {
 						this.plugin.settings.platforms[currentPlatform].apiKey = value;
@@ -217,7 +217,7 @@ export class AIMetadataSettingTab extends PluginSettingTab {
 
 		// Max Tokens
 		new Setting(containerEl)
-			.setName("Max Tokens")
+			.setName("Max tokens")
 			.setDesc("最大生成令牌数")
 			.addSlider((slider) =>
 				slider

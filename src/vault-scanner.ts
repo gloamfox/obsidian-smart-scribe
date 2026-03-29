@@ -148,7 +148,7 @@ export class VaultScanner {
 		const contentLower = content.toLowerCase();
 		const scores = new Map<string, number>();
 
-		for (const [tag, count] of existingTags) {
+		for (const [tag] of existingTags) {
 			let score = 0;
 			const tagLower = tag.toLowerCase();
 
