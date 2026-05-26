@@ -148,8 +148,8 @@ export class TextOptimizationModal extends Modal {
 
 		if (mode === "source") {
 			// 切换到源码模式
-			this.editorEl.classList.remove("hidden");
-			this.previewEl.classList.remove("visible");
+			this.editorEl.classList.remove("mod-hidden");
+			this.previewEl.classList.remove("mod-visible");
 
 			// 更新标签样式
 			this.sourceTabBtn.classList.add("ai-optimize-tab-active");
@@ -159,8 +159,8 @@ export class TextOptimizationModal extends Modal {
 			this.refreshBtn.classList.remove("visible");
 		} else {
 			// 切换到阅读视图
-			this.editorEl.classList.add("hidden");
-			this.previewEl.classList.add("visible");
+			this.editorEl.classList.add("mod-hidden");
+			this.previewEl.classList.add("mod-visible");
 
 			// 更新标签样式
 			this.previewTabBtn.classList.add("ai-optimize-tab-active");
