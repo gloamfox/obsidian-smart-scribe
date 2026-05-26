@@ -5,6 +5,7 @@ import {
 	Plugin,
 	TFile,
 	TFolder,
+	stringifyYaml,
 } from "obsidian";
 import { AnalysisResult, AIPlatform, PLATFORM_DEFAULTS, createAIProvider, AIProviderConfig } from "./src/ai-provider";
 import { VaultScanner } from "./src/vault-scanner";
@@ -323,7 +324,8 @@ export default class AIMetadataPlugin extends Plugin {
 			const result = await provider.analyze(cleanContent, existingTags, existingCategories);
 
 			// 读取已有 frontmatter，保留 share 字段
-			const existingFrontmatter = this.extractFrontmatter(content);
+			const cache = this.app.metadataCache.getFileCache(file);
+			const existingFrontmatter = cache?.frontmatter || {};
 			if (existingFrontmatter.share === true || existingFrontmatter.share === "true") {
 				result.share = true;
 			}
@@ -370,7 +372,8 @@ export default class AIMetadataPlugin extends Plugin {
 			const result = await provider.analyze(cleanContent, existingTags, existingCategories);
 
 			// 读取已有 frontmatter，检查 share 字段
-			const existingFrontmatter = this.extractFrontmatter(content);
+			const cache = this.app.metadataCache.getFileCache(file);
+			const existingFrontmatter = cache?.frontmatter || {};
 			if (existingFrontmatter.share === true || existingFrontmatter.share === "true") {
 				result.share = true;
 			}
@@ -433,7 +436,8 @@ export default class AIMetadataPlugin extends Plugin {
 		};
 
 		// 获取 date：优先使用已有 frontmatter 中的 date，否则使用文件创建时间
-		const existingFrontmatter = this.extractFrontmatter(originalContent);
+		const cache = this.app.metadataCache.getFileCache(file);
+		const existingFrontmatter = cache?.frontmatter || {};
 		let dateStr = existingFrontmatter?.date;
 		if (!dateStr) {
 			// 使用文件创建时间，格式化为 YYYY-MM-DD HH:mm:ss
@@ -460,54 +464,39 @@ export default class AIMetadataPlugin extends Plugin {
 	}
 
 	private buildFrontmatter(result: AnalysisResult): string {
-		// 确保所有字段都有有效值
-		const title = result?.title || "";
-		const tags = Array.isArray(result?.tags) ? result.tags : [];
-		const category = result?.category || "";
-		const summary = result?.summary || "";
-		const date = result?.date || "";
-		const keywords = Array.isArray(result?.keywords) ? result.keywords : [];
+		// 构建 frontmatter 数据对象
+		const frontmatter: Record<string, any> = {};
 
-		const lines = ["---"];
-
-		if (date) {
-			lines.push(`date: ${date}`);
+		if (result?.date) {
+			frontmatter.date = result.date;
 		}
 
-		if (title) {
-			lines.push(`title: ${title}`);
+		if (result?.title) {
+			frontmatter.title = result.title;
 		}
 
-		if (tags.length > 0) {
-			lines.push(`tags:`);
-			for (const tag of tags) {
-				lines.push(`  - ${tag}`);
-			}
+		if (Array.isArray(result?.tags) && result.tags.length > 0) {
+			frontmatter.tags = result.tags;
 		}
 
-		if (category) {
-			lines.push(`category: ${category}`);
+		if (result?.category) {
+			frontmatter.category = result.category;
 		}
 
-		if (keywords.length > 0) {
-			lines.push(`keywords:`);
-			for (const kw of keywords) {
-				lines.push(`  - ${kw}`);
-			}
+		if (Array.isArray(result?.keywords) && result.keywords.length > 0) {
+			frontmatter.keywords = result.keywords;
 		}
 
-		if (summary) {
-			lines.push(`summary: ${summary}`);
+		if (result?.summary) {
+			frontmatter.summary = result.summary;
 		}
 
-		// share 字段：如果为 true 则添加
 		if (result?.share === true) {
-			lines.push(`share: true`);
+			frontmatter.share = true;
 		}
 
-		lines.push("---");
-
-		return lines.join("\n");
+		// 使用 Obsidian 的 stringifyYaml API
+		return "---\n" + stringifyYaml(frontmatter) + "---";
 	}
 
 	private extractContentWithoutFrontmatter(content: string): string {
@@ -516,48 +505,6 @@ export default class AIMetadataPlugin extends Plugin {
 			return content.slice(match[0].length).trim();
 		}
 		return content.trim();
-	}
-
-	private extractFrontmatter(content: string): Record<string, unknown> {
-		const match = content.match(/^---\s*\n([\s\S]*?)\n---/);
-		if (!match) return {};
-
-		const yaml = match[1];
-		const result: Record<string, unknown> = {};
-
-		const lines = yaml.split("\n");
-		let currentKey = "";
-		let inArray = false;
-
-		for (const line of lines) {
-			const trimmed = line.trim();
-			const colonIndex = line.indexOf(":");
-
-			if (colonIndex > 0 && !inArray) {
-				currentKey = line.slice(0, colonIndex).trim();
-				const value = line.slice(colonIndex + 1).trim();
-
-				if (value === "") {
-					inArray = true;
-					result[currentKey] = [];
-				} else if (value.startsWith("[") && value.endsWith("]")) {
-					result[currentKey] = value
-						.slice(1, -1)
-						.split(",")
-						.map((v) => v.trim().replace(/^["']|["']$/g, ""));
-				} else {
-					result[currentKey] = value.replace(/^["']|["']$/g, "");
-				}
-			} else if (trimmed.startsWith("-") && inArray && currentKey) {
-				const value = trimmed.slice(1).trim();
-				const arr = result[currentKey] as string[];
-				arr.push(value.replace(/^["']|["']$/g, ""));
-			} else if (trimmed === "" || colonIndex > 0) {
-				inArray = false;
-			}
-		}
-
-		return result;
 	}
 
 	private normalizeTags(tags: unknown): string[] {

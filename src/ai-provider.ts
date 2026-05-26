@@ -97,11 +97,11 @@ function buildSystemPrompt(existingTags: string[], existingCategories: string[])
 - keywords 应该是文章的核心概念、技术术语、关键实体等，用于搜索发现`;
 
 	if (existingTags.length > 0) {
-		prompt += `\n\n**重要：优先使用以下已有标签**（如果内容相关）：\n${existingTags.join(", ")}`;
+		prompt += `\n\n**重要：优先使用以下已有标签，若现有标签库中无合适标签，可新增且应避免与现有标签语义重复，禁止创造同义词或近义词，并且新增的标签应尽可能通用、规范。**：\n${existingTags.join(", ")}`;
 	}
 
 	if (existingCategories.length > 0) {
-		prompt += `\n\n**重要：优先从以下已有分类中选择**（如果内容匹配）：\n${existingCategories.join(", ")}`;
+		prompt += `\n\n**重要：优先从以下已有分类中选择，若现有分类中无合适呋喃类，可新增且应避免与现有分类语义重复，禁止创造同义词或近义词，并且新增的分类应尽可能通用、规范。。**：\n${existingCategories.join(", ")}`;
 	}
 
 	prompt += `\n\n请只返回 JSON 格式的结果，不要包含其他说明文字。`;
@@ -231,9 +231,10 @@ export class ClaudeProvider implements AIProvider {
 
 	async analyze(content: string, existingTags: string[] = [], existingCategories: string[] = []): Promise<AnalysisResult> {
 		const systemPrompt = buildSystemPrompt(existingTags, existingCategories);
+		const url = `${this.config.baseUrl || PLATFORM_DEFAULTS.claude.baseUrl}/v1/messages`;
 
 		const response = await requestUrl({
-			url: `${this.config.baseUrl || PLATFORM_DEFAULTS.claude.baseUrl}/v1/messages`,
+			url: url,
 			method: "POST",
 			headers: {
 				"Content-Type": "application/json",
@@ -254,7 +255,7 @@ export class ClaudeProvider implements AIProvider {
 		});
 
 		if (response.status !== 200) {
-			throw new Error(`Claude API 请求失败: ${response.status} ${response.text}`);
+			throw new Error(`API 请求失败: ${response.status} ${response.text}`);
 		}
 
 		const data = response.json;
@@ -291,7 +292,7 @@ export class ClaudeProvider implements AIProvider {
 		});
 
 		if (response.status !== 200) {
-			throw new Error(`Claude API 请求失败: ${response.status} ${response.text}`);
+			throw new Error(`API 请求失败: ${response.status} ${response.text}`);
 		}
 
 		const data = response.json;

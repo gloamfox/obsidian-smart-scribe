@@ -2,7 +2,7 @@
   "id": "smartscribe",
   "name": "SmartScribe",
   "version": "1.0.0",
-  "minAppVersion": "0.15.0",
+  "minAppVersion": "1.12.7",
   "description": "AI-powered writing assistant. Generate metadata (titles, tags, categories, summaries) and optimize your writing with support for multiple AI platforms.",
   "author": "gloamfox",
   "authorUrl": "https://gloamfox.github.io",
