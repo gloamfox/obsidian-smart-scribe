@@ -1,6 +1,6 @@
 {
   "name": "obsidian-smart-scribe",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "AI-powered writing assistant for Obsidian - generate metadata and optimize your writing",
   "main": "main.js",
   "scripts": {
