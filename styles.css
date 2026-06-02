@@ -18,10 +18,10 @@
 }
 
 /* Text Optimization Modal Styles */
-.ai-optimize-modal {
-	width: 90vw !important;
-	max-width: 1200px !important;
-	height: 90vh !important;
+.modal.ai-optimize-modal {
+	width: 90vw;
+	max-width: 1200px;
+	height: 90vh;
 }
 
 .ai-optimize-modal .modal-content {
@@ -69,11 +69,12 @@
 	transition: all 0.15s ease;
 }
 
+.ai-optimize-tab.is-active,
 .ai-optimize-tab-active {
-	background: var(--background-primary) !important;
-	border-color: var(--background-modifier-border) !important;
-	color: var(--text-normal) !important;
-	font-weight: 500 !important;
+	background: var(--background-primary);
+	border-color: var(--background-modifier-border);
+	color: var(--text-normal);
+	font-weight: 500;
 }
 
 .ai-optimize-refresh-btn {
@@ -122,8 +123,8 @@
 	font-size: var(--font-text-size);
 }
 
-.ai-optimize-editable.hidden {
-	display: none !important;
+.ai-optimize-editable.mod-hidden {
+	display: none;
 }
 
 .ai-optimize-preview {
@@ -134,8 +135,8 @@
 	line-height: 1.6;
 }
 
-.ai-optimize-preview.visible {
-	display: block !important;
+.ai-optimize-preview.mod-visible {
+	display: block;
 }
 
 .ai-optimize-right {
