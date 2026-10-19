@@ -19,12 +19,12 @@ export class AIMetadataSettingTab extends PluginSettingTab {
 		const tabBar = containerEl.createEl("nav", { cls: "ai-settings-tab-bar" });
 
 		// AI 模型配置 Tab
-		const modelTab = tabBar.createEl("div", {
+		const modelTab = tabBar.createDiv({
 			cls: "ai-settings-tab" + (this.activeTab === "model" ? " ai-settings-tab-active" : " ai-settings-tab-inactive"),
 		});
 
 		// 图标 - 使用 createSvg 代替 innerHTML
-		const modelIcon = modelTab.createEl("div", { cls: "ai-settings-tab-icon" });
+		const modelIcon = modelTab.createDiv({ cls: "ai-settings-tab-icon" });
 		const modelSvg = modelIcon.createSvg("svg", {
 			attr: {
 				xmlns: "http://www.w3.org/2000/svg",
@@ -41,18 +41,18 @@ export class AIMetadataSettingTab extends PluginSettingTab {
 		modelSvg.createSvg("path", { attr: { d: "M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" } });
 
 		// 文字
-		modelTab.createEl("div", {
+		modelTab.createDiv({
 			cls: "ai-settings-tab-name",
 			text: "AI 模型配置"
 		});
 
 		// 插件功能配置 Tab
-		const featureTab = tabBar.createEl("div", {
+		const featureTab = tabBar.createDiv({
 			cls: "ai-settings-tab" + (this.activeTab === "feature" ? " ai-settings-tab-active" : " ai-settings-tab-inactive"),
 		});
 
 		// 图标 - 使用 createSvg 代替 innerHTML
-		const featureIcon = featureTab.createEl("div", { cls: "ai-settings-tab-icon" });
+		const featureIcon = featureTab.createDiv({ cls: "ai-settings-tab-icon" });
 		const featureSvg = featureIcon.createSvg("svg", {
 			attr: {
 				xmlns: "http://www.w3.org/2000/svg",
@@ -70,7 +70,7 @@ export class AIMetadataSettingTab extends PluginSettingTab {
 		featureSvg.createSvg("path", { attr: { d: "M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" } });
 
 		// 文字
-		featureTab.createEl("div", {
+		featureTab.createDiv({
 			cls: "ai-settings-tab-name",
 			text: "插件功能配置"
 		});
@@ -292,15 +292,15 @@ export class AIMetadataSettingTab extends PluginSettingTab {
 					})
 			);
 
-		// 文本优化设置
+		// 智能润色设置
 		new Setting(containerEl)
-			.setName("文本优化设置")
+			.setName("智能润色设置")
 			.setHeading();
 
 		// Show Optimize Preview
 		new Setting(containerEl)
-			.setName("优化前显示预览")
-			.setDesc("开启后，优化文本前会先显示预览窗口；关闭选项则直接应用")
+			.setName("润色前显示预览")
+			.setDesc("开启后，润色前会先显示预览窗口；关闭选项则直接应用")
 			.addToggle((toggle) =>
 				toggle
 					.setValue(this.plugin.settings.showOptimizePreview)
@@ -312,8 +312,8 @@ export class AIMetadataSettingTab extends PluginSettingTab {
 
 		// Show Optimize Menu
 		new Setting(containerEl)
-			.setName("显示优化菜单")
-			.setDesc("在文件浏览器和编辑器右键菜单中显示 AI 优化文本选项")
+			.setName("显示润色菜单")
+			.setDesc("在文件浏览器和编辑器右键菜单中显示智能润色选项")
 			.addToggle((toggle) =>
 				toggle
 					.setValue(this.plugin.settings.showOptimizeMenu)

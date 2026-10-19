@@ -17,7 +17,7 @@ export interface OptimizationResult {
 
 export interface AIProvider {
 	analyze(content: string, existingTags: string[], existingCategories: string[]): Promise<AnalysisResult>;
-	optimize(content: string, isPartial: boolean): Promise<OptimizationResult>;
+	optimize(content: string, isPartial: boolean, extraInstruction?: string): Promise<OptimizationResult>;
 }
 
 export interface AIProviderConfig {
@@ -66,7 +66,7 @@ export const PLATFORM_DEFAULTS: Record<AIPlatform, { name: string; baseUrl: stri
 	spark: {
 		name: "讯飞星火",
 		baseUrl: "https://spark-api-open.xf-yun.com/v1",
-		models: ["lite", "pro", "pro-128k", "max", "4.0-ultra"],
+		models: ["lite", "pro", "pro-128k", "max", "4.0Ultra"],
 		defaultModel: "pro",
 	},
 };
@@ -115,13 +115,13 @@ function parseResponse(response: string): AnalysisResult {
 		// 尝试提取 JSON 部分
 		const jsonMatch = response.match(/\{[\s\S]*\}/);
 		if (jsonMatch) {
-			const parsed = JSON.parse(jsonMatch[0]);
+			const parsed = JSON.parse(jsonMatch[0]) as Record<string, unknown>;
 			return {
-				title: parsed.title || "未命名",
-				tags: Array.isArray(parsed.tags) ? parsed.tags : [],
-				category: parsed.category || "未分类",
-				summary: parsed.summary || "",
-				keywords: Array.isArray(parsed.keywords) ? parsed.keywords : [],
+				title: typeof parsed.title === "string" ? parsed.title : "未命名",
+				tags: Array.isArray(parsed.tags) ? parsed.tags.map(String) : [],
+				category: typeof parsed.category === "string" ? parsed.category : "未分类",
+				summary: typeof parsed.summary === "string" ? parsed.summary : "",
+				keywords: Array.isArray(parsed.keywords) ? parsed.keywords.map(String) : [],
 			};
 		}
 		throw new Error("无法解析 AI 响应");
@@ -154,11 +154,20 @@ function parseOptimizationResponse(response: string): OptimizationResult {
 		// 尝试提取 JSON 部分（兼容旧格式）
 		const jsonMatch = response.match(/\{[\s\S]*\}/);
 		if (jsonMatch) {
-			const parsed = JSON.parse(jsonMatch[0]);
-			return {
-				optimizedText: parsed.optimizedText || parsed.text || response,
-				explanation: parsed.explanation || parsed.changes || "",
-			};
+			const parsed = JSON.parse(jsonMatch[0]) as Record<string, unknown>;
+			const optimizedText =
+				typeof parsed.optimizedText === "string"
+					? parsed.optimizedText
+					: typeof parsed.text === "string"
+						? parsed.text
+						: response;
+			const explanation =
+				typeof parsed.explanation === "string"
+					? parsed.explanation
+					: typeof parsed.changes === "string"
+						? parsed.changes
+						: "";
+			return { optimizedText, explanation };
 		}
 
 		// 如果没有匹配到任何格式，返回整个响应作为优化文本
@@ -176,16 +185,32 @@ function parseOptimizationResponse(response: string): OptimizationResult {
 }
 
 // 构建优化提示词
-function buildOptimizePrompt(isPartial: boolean): string {
-	if (isPartial) {
-		return `你是一位专业的写作编辑。请优化用户提供的文本片段，改进其表达和叙述结构。
+function buildOptimizePrompt(isPartial: boolean, extraInstruction?: string): string {
+	let prompt = isPartial
+		? `你是一位专业的写作编辑。请优化用户提供的文本片段，改进其表达和叙述结构。
 
 要求：
 1. 保持原文的核心意思不变
 2. 改进语言表达，使其更加流畅、准确
 3. 优化句子结构，增强可读性
 4. 修正语法错误和不恰当的用词
-5. 保持文本片段的原有风格
+5. 保持文本片段的原有风格`
+		: `你是一位专业的写作编辑。请优化用户提供的文章，改进其整体表达和叙述结构。
+
+要求：
+1. 保持原文的核心意思和主题不变
+2. 改进语言表达，使其更加流畅、准确、专业
+3. 优化文章结构，增强逻辑性和可读性
+4. 修正语法错误、错别字和不恰当的用词
+5. 保持文章的原有风格和语气
+6. 可以适当调整段落结构，使文章更有层次感`;
+
+	// 追加补充优化指令（如"更长一点""更正式"或用户的补充描述）
+	if (extraInstruction && extraInstruction.trim()) {
+		prompt += `\n\n补充优化要求：${extraInstruction.trim()}`;
+	}
+
+	prompt += `
 
 请按以下格式返回结果：
 
@@ -197,28 +222,8 @@ function buildOptimizePrompt(isPartial: boolean): string {
 2. 改进点二的说明
 3. 改进点三的说明
 （按条目列出主要改进点，纯文本格式，不要使用Markdown加粗、斜体等格式）`;
-	} else {
-		return `你是一位专业的写作编辑。请优化用户提供的文章，改进其整体表达和叙述结构。
 
-要求：
-1. 保持原文的核心意思和主题不变
-2. 改进语言表达，使其更加流畅、准确、专业
-3. 优化文章结构，增强逻辑性和可读性
-4. 修正语法错误、错别字和不恰当的用词
-5. 保持文章的原有风格和语气
-6. 可以适当调整段落结构，使文章更有层次感
-
-请按以下格式返回结果：
-
-===优化后的文本===
-（在这里输出优化后的文本内容，保持Markdown格式，不要包含JSON格式或代码块）
-
-===优化说明===
-1. 改进点一的说明
-2. 改进点二的说明
-3. 改进点三的说明
-（按条目列出主要改进点，如结构调整、语言润色等，纯文本格式，不要使用Markdown加粗、斜体等格式）`;
-	}
+	return prompt;
 }
 
 // Claude Provider
@@ -258,17 +263,17 @@ export class ClaudeProvider implements AIProvider {
 			throw new Error(`API 请求失败: ${response.status} ${response.text}`);
 		}
 
-		const data = response.json;
-		const textContent = data.content
-			.filter((block: { type: string }) => block.type === "text")
-			.map((block: { text: string }) => block.text)
+		const data = response.json as { content?: Array<{ type?: string; text?: string }> };
+		const textContent = (data.content ?? [])
+			.filter((block) => block.type === "text")
+			.map((block) => block.text ?? "")
 			.join("");
 
 		return parseResponse(textContent);
 	}
 
-	async optimize(content: string, isPartial: boolean = false): Promise<OptimizationResult> {
-		const systemPrompt = buildOptimizePrompt(isPartial);
+	async optimize(content: string, isPartial: boolean = false, extraInstruction?: string): Promise<OptimizationResult> {
+		const systemPrompt = buildOptimizePrompt(isPartial, extraInstruction);
 
 		const response = await requestUrl({
 			url: `${this.config.baseUrl || PLATFORM_DEFAULTS.claude.baseUrl}/v1/messages`,
@@ -295,10 +300,10 @@ export class ClaudeProvider implements AIProvider {
 			throw new Error(`API 请求失败: ${response.status} ${response.text}`);
 		}
 
-		const data = response.json;
-		const textContent = data.content
-			.filter((block: { type: string }) => block.type === "text")
-			.map((block: { text: string }) => block.text)
+		const data = response.json as { content?: Array<{ type?: string; text?: string }> };
+		const textContent = (data.content ?? [])
+			.filter((block) => block.type === "text")
+			.map((block) => block.text ?? "")
 			.join("");
 
 		return parseOptimizationResponse(textContent);
@@ -341,14 +346,14 @@ export class OpenAICompatibleProvider implements AIProvider {
 			throw new Error(`${PLATFORM_DEFAULTS[this.platform].name} API 请求失败: ${response.status} ${response.text}`);
 		}
 
-		const data = response.json;
-		const textContent = data.choices?.[0]?.message?.content || "";
+		const data = response.json as { choices?: Array<{ message?: { content?: string } }> };
+		const textContent = data.choices?.[0]?.message?.content ?? "";
 
 		return parseResponse(textContent);
 	}
 
-	async optimize(content: string, isPartial: boolean = false): Promise<OptimizationResult> {
-		const systemPrompt = buildOptimizePrompt(isPartial);
+	async optimize(content: string, isPartial: boolean = false, extraInstruction?: string): Promise<OptimizationResult> {
+		const systemPrompt = buildOptimizePrompt(isPartial, extraInstruction);
 		const baseUrl = this.config.baseUrl || PLATFORM_DEFAULTS[this.platform].baseUrl;
 
 		const response = await requestUrl({
@@ -373,8 +378,8 @@ export class OpenAICompatibleProvider implements AIProvider {
 			throw new Error(`${PLATFORM_DEFAULTS[this.platform].name} API 请求失败: ${response.status} ${response.text}`);
 		}
 
-		const data = response.json;
-		const textContent = data.choices?.[0]?.message?.content || "";
+		const data = response.json as { choices?: Array<{ message?: { content?: string } }> };
+		const textContent = data.choices?.[0]?.message?.content ?? "";
 
 		return parseOptimizationResponse(textContent);
 	}

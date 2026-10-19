@@ -31,7 +31,7 @@ export class TextOptimizationModal extends Modal {
 		// 设置模态框更大尺寸 - 使用CSS类
 		this.modalEl.classList.add("ai-optimize-modal");
 
-		contentEl.createEl("h2", { text: this.isPartial ? "AI 文本优化（选中片段）" : "AI 文本优化（全文）" });
+		contentEl.createEl("h2", { text: this.isPartial ? "智能润色（选中片段）" : "智能润色（全文）" });
 
 		// 主容器 - 左右分栏
 		const mainContainer = contentEl.createDiv({ cls: "ai-optimize-container" });
@@ -70,12 +70,12 @@ export class TextOptimizationModal extends Modal {
 		const editorContainer = leftPanel.createDiv({ cls: "ai-optimize-editor" });
 
 		// 源码模式编辑器 - 使用 contentEditable div
-		this.editorEl = editorContainer.createEl("div", { cls: "ai-optimize-editable" });
+		this.editorEl = editorContainer.createDiv({ cls: "ai-optimize-editable" });
 		this.editorEl.contentEditable = "true";
 		this.editorEl.textContent = this.editedText;
 
 		// 阅读视图容器 - 使用 MarkdownRenderer 渲染
-		this.previewEl = editorContainer.createEl("div", {
+		this.previewEl = editorContainer.createDiv({
 			cls: "ai-optimize-preview markdown-rendered markdown-preview-view"
 		});
 
@@ -94,20 +94,20 @@ export class TextOptimizationModal extends Modal {
 			const suggestions = this.parseSuggestions(this.result.explanation);
 			if (suggestions.length > 0) {
 				suggestions.forEach((suggestion) => {
-					const itemDiv = suggestionContainer.createEl("div", { cls: "ai-optimize-suggestion-item" });
+					const itemDiv = suggestionContainer.createDiv({ cls: "ai-optimize-suggestion-item" });
 
-					itemDiv.createEl("span", { text: "• ", cls: "ai-optimize-suggestion-bullet" });
+					itemDiv.createSpan({ text: "• ", cls: "ai-optimize-suggestion-bullet" });
 
-					itemDiv.createEl("span", { text: suggestion, cls: "ai-optimize-suggestion-text" });
+					itemDiv.createSpan({ text: suggestion, cls: "ai-optimize-suggestion-text" });
 				});
 			} else {
-				suggestionContainer.createEl("div", {
+				suggestionContainer.createDiv({
 					text: this.result.explanation,
 					cls: "ai-optimize-suggestion-text"
 				});
 			}
 		} else {
-			suggestionContainer.createEl("div", {
+			suggestionContainer.createDiv({
 				text: "无优化建议",
 				cls: "ai-optimize-no-suggestions"
 			});

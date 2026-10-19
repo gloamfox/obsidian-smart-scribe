@@ -1,5 +1,6 @@
 import {
 	Editor,
+	EditorPosition,
 	MarkdownView,
 	Notice,
 	Plugin,
@@ -7,13 +8,22 @@ import {
 	TFolder,
 	stringifyYaml,
 } from "obsidian";
-import { AnalysisResult, AIPlatform, PLATFORM_DEFAULTS, createAIProvider, AIProviderConfig } from "./src/ai-provider";
+import { AnalysisResult, AIPlatform, PLATFORM_DEFAULTS, createAIProvider, AIProviderConfig, OptimizationResult } from "./src/ai-provider";
 import { VaultScanner } from "./src/vault-scanner";
 import { AIMetadataSettings, DEFAULT_SETTINGS } from "./src/settings";
 import { AIMetadataSettingTab } from "./src/ui/setting-tab";
 import { MetadataPreviewModal } from "./src/modals/metadata-preview-modal";
 import { TextOptimizationModal } from "./src/modals/text-optimization-modal";
 import { BatchConfirmModal } from "./src/modals/batch-confirm-modal";
+import { InlineOptimizationOverlay } from "./src/ui/inline-optimization-overlay";
+
+/** 从 catch 捕获的未知类型错误中提取可展示的消息文本 */
+function getErrorMessage(error: unknown): string {
+	if (error instanceof Error) {
+		return error.message;
+	}
+	return String(error);
+}
 
 export default class AIMetadataPlugin extends Plugin {
 	settings: AIMetadataSettings;
@@ -75,13 +85,13 @@ export default class AIMetadataPlugin extends Plugin {
 			})
 		);
 
-		// 注册文件菜单事件（AI优化文本）
+		// 注册文件菜单事件（智能润色）
 		this.registerEvent(
 			this.app.workspace.on("file-menu", (menu, file) => {
 				if (this.showOptimizeContextMenu && file instanceof TFile && file.extension === "md") {
 					menu.addItem((item) => {
 						item
-							.setTitle("AI 优化文本")
+							.setTitle("智能润色")
 							.setIcon("wand-2")
 							.onClick(async () => {
 								// 打开文件并优化全文
@@ -117,13 +127,13 @@ export default class AIMetadataPlugin extends Plugin {
 			})
 		);
 
-		// 注册编辑器菜单事件（优化文本）
+		// 注册编辑器菜单事件（智能润色）
 		this.registerEvent(
 			this.app.workspace.on("editor-menu", (menu, editor, view) => {
 				if (this.showOptimizeContextMenu && view.file && view.file.extension === "md") {
 					menu.addItem((item) => {
 						item
-							.setTitle("AI 优化文本")
+							.setTitle("智能润色")
 							.setIcon("wand-2")
 							.onClick(async () => {
 								await this.optimizeText(editor, view.file);
@@ -150,10 +160,10 @@ export default class AIMetadataPlugin extends Plugin {
 			},
 		});
 
-		// 添加优化文本命令
+		// 添加智能润色命令
 		this.addCommand({
 			id: "optimize-text",
-			name: "AI 优化文本",
+			name: "智能润色",
 			editorCallback: async (editor: Editor, view: MarkdownView) => {
 				await this.optimizeText(editor, view.file);
 			},
@@ -161,7 +171,7 @@ export default class AIMetadataPlugin extends Plugin {
 
 		this.addCommand({
 			id: "optimize-text-with-preview",
-			name: "AI 优化文本（预览）",
+			name: "智能润色（预览）",
 			editorCallback: async (editor: Editor, view: MarkdownView) => {
 				await this.optimizeTextWithPreview(editor, view.file);
 			},
@@ -175,8 +185,8 @@ export default class AIMetadataPlugin extends Plugin {
 	}
 
 	async loadSettings() {
-		const loaded = await this.loadData();
-		this.settings = Object.assign({}, DEFAULT_SETTINGS, loaded);
+		const loaded = (await this.loadData()) as Partial<AIMetadataSettings> | null;
+		this.settings = Object.assign({}, DEFAULT_SETTINGS, loaded ?? {});
 
 		// 确保所有平台配置都存在
 		for (const platform of Object.keys(PLATFORM_DEFAULTS) as AIPlatform[]) {
@@ -337,7 +347,7 @@ export default class AIMetadataPlugin extends Plugin {
 		} catch (error) {
 			console.error("生成失败:", error);
 			this.updateStatusBar("生成失败");
-			new Notice(`生成失败: ${error.message}`);
+			new Notice(`生成失败: ${getErrorMessage(error)}`);
 		}
 	}
 
@@ -389,7 +399,7 @@ export default class AIMetadataPlugin extends Plugin {
 					}).catch((error) => {
 						console.error("应用笔记属性失败:", error);
 						this.updateStatusBar("应用失败");
-						new Notice(`应用失败: ${error.message}`);
+						new Notice(`应用失败: ${getErrorMessage(error)}`);
 					});
 				} else {
 					this.updateStatusBar("已取消");
@@ -398,7 +408,7 @@ export default class AIMetadataPlugin extends Plugin {
 		} catch (error) {
 			console.error("生成失败:", error);
 			this.updateStatusBar("生成失败");
-			new Notice(`生成失败: ${error.message}`);
+			new Notice(`生成失败: ${getErrorMessage(error)}`);
 		}
 	}
 
@@ -438,7 +448,8 @@ export default class AIMetadataPlugin extends Plugin {
 		// 获取 date：优先使用已有 frontmatter 中的 date，否则使用文件创建时间
 		const cache = this.app.metadataCache.getFileCache(file);
 		const existingFrontmatter = cache?.frontmatter || {};
-		let dateStr = existingFrontmatter?.date;
+		const existingDate: unknown = existingFrontmatter.date;
+		let dateStr: string | undefined = typeof existingDate === "string" ? existingDate : undefined;
 		if (!dateStr) {
 			// 使用文件创建时间，格式化为 YYYY-MM-DD HH:mm:ss
 			const stat = await this.app.vault.adapter.stat(file.path);
@@ -465,7 +476,7 @@ export default class AIMetadataPlugin extends Plugin {
 
 	private buildFrontmatter(result: AnalysisResult): string {
 		// 构建 frontmatter 数据对象
-		const frontmatter: Record<string, any> = {};
+		const frontmatter: Record<string, unknown> = {};
 
 		if (result?.date) {
 			frontmatter.date = result.date;
@@ -578,50 +589,42 @@ export default class AIMetadataPlugin extends Plugin {
 		}
 
 		const selection = editor.getSelection();
-		const isPartial = selection.length > 0;
+		const isPartial = selection.length > 0 && !this.isSelectionWholeFile(editor, selection);
 		const contentToOptimize = isPartial ? selection : editor.getValue();
+		// 在请求 AI 前捕获选区位置，避免等待期间用户移动光标导致替换错位
+		const from = editor.getCursor("from");
+		const to = editor.getCursor("to");
 
 		if (!contentToOptimize.trim()) {
-			new Notice("没有可优化的内容");
+			new Notice("请先选中需要优化的文本，或打开一个非空文件");
 			return;
 		}
 
-		this.updateStatusBar("优化中...", false);
-		new Notice(`正在使用 ${PLATFORM_DEFAULTS[this.settings.activePlatform].name} 优化文本...`);
+		this.updateStatusBar("润色中...", false);
+		new Notice(`正在使用 ${PLATFORM_DEFAULTS[this.settings.activePlatform].name} 智能润色...`);
 
 		try {
 			const provider = this.getAIProvider();
 			const result = await provider.optimize(contentToOptimize, isPartial);
 
-			if (this.settings.showOptimizePreview) {
-				this.updateStatusBar("预览中", false);
-				new TextOptimizationModal(this.app, result, isPartial, (confirmed, editedText) => {
-					if (confirmed && editedText) {
-						if (isPartial) {
-							editor.replaceSelection(editedText);
-						} else {
-							editor.setValue(editedText);
-						}
-						this.updateStatusBar("已应用");
-						new Notice("文本优化已应用！");
-					} else {
-						this.updateStatusBar("已取消");
-					}
-				}).open();
-			} else {
-				// 直接应用
-				if (isPartial) {
-					editor.replaceSelection(result.optimizedText);
+			// 部分选中：走内联预览浮层流程
+			if (isPartial) {
+				if (this.settings.showOptimizePreview) {
+					this.openInlineOverlay(editor, result, selection, from, to);
 				} else {
-					editor.setValue(result.optimizedText);
+					editor.replaceSelection(result.optimizedText);
+					this.updateStatusBar("已应用");
+					new Notice("智能润色已应用！");
 				}
-				this.updateStatusBar("已应用");
-				new Notice("文本优化已应用！");
+				return;
 			}
+
+			// 全文选中 / 未选中（默认全文优化）：走原有 Modal 弹窗流程
+			this.openOptimizationModal(editor, result, false);
 		} catch (error) {
 			console.error("优化失败:", error);
 			this.updateStatusBar("优化失败");
-			new Notice(`优化失败: ${error.message}`);
+			new Notice(`优化失败: ${getErrorMessage(error)}`);
 		}
 	}
 
@@ -632,39 +635,126 @@ export default class AIMetadataPlugin extends Plugin {
 		}
 
 		const selection = editor.getSelection();
-		const isPartial = selection.length > 0;
+		const isPartial = selection.length > 0 && !this.isSelectionWholeFile(editor, selection);
 		const contentToOptimize = isPartial ? selection : editor.getValue();
+		// 在请求 AI 前捕获选区位置，避免等待期间用户移动光标导致替换错位
+		const from = editor.getCursor("from");
+		const to = editor.getCursor("to");
 
 		if (!contentToOptimize.trim()) {
-			new Notice("没有可优化的内容");
+			new Notice("请先选中需要优化的文本，或打开一个非空文件");
 			return;
 		}
 
-		this.updateStatusBar("优化中...", false);
-		new Notice(`正在使用 ${PLATFORM_DEFAULTS[this.settings.activePlatform].name} 优化文本...`);
+		this.updateStatusBar("润色中...", false);
+		new Notice(`正在使用 ${PLATFORM_DEFAULTS[this.settings.activePlatform].name} 智能润色...`);
 
 		try {
 			const provider = this.getAIProvider();
 			const result = await provider.optimize(contentToOptimize, isPartial);
 
-			this.updateStatusBar("预览中", false);
-			new TextOptimizationModal(this.app, result, isPartial, (confirmed, editedText) => {
-				if (confirmed && editedText) {
-					if (isPartial) {
-						editor.replaceSelection(editedText);
-					} else {
-						editor.setValue(editedText);
-					}
-					this.updateStatusBar("已应用");
-					new Notice("文本优化已应用！");
-				} else {
-					this.updateStatusBar("已取消");
-				}
-			}).open();
+			// 部分选中：内联浮层；全文 / 未选中：原有 Modal
+			if (isPartial) {
+				this.openInlineOverlay(editor, result, selection, from, to);
+			} else {
+				this.openOptimizationModal(editor, result, false);
+			}
 		} catch (error) {
 			console.error("优化失败:", error);
 			this.updateStatusBar("优化失败");
-			new Notice(`优化失败: ${error.message}`);
+			new Notice(`优化失败: ${getErrorMessage(error)}`);
 		}
+	}
+
+	/**
+	 * 判断当前选区是否覆盖文档全文。
+	 * 满足任一条件即视为全文选中：
+	 * 1. 选区起止分别位于文档首、文档尾
+	 * 2. 选区内容长度等于整个文档内容长度（去掉首尾空白后比较）
+	 */
+	private isSelectionWholeFile(editor: Editor, selection: string): boolean {
+		const docLength = editor.getValue().length;
+		if (docLength === 0) {
+			return false;
+		}
+
+		const from = editor.getCursor("from");
+		const to = editor.getCursor("to");
+
+		const lastLine = editor.lastLine();
+		const lastLineLength = editor.getLine(lastLine).length;
+
+		// 选区起止位置覆盖文档首尾
+		const coversEdges =
+			from.line === 0 &&
+			from.ch === 0 &&
+			to.line === lastLine &&
+			to.ch === lastLineLength;
+
+		// 选区内容长度等于整篇文档内容长度
+		const coversAllContent = selection.trim().length === editor.getValue().trim().length;
+
+		return coversEdges || coversAllContent;
+	}
+
+	/** 弹出原有双面板 Modal（全文 / 显式预览场景） */
+	private openOptimizationModal(editor: Editor, result: OptimizationResult, isPartial: boolean) {
+		this.updateStatusBar("预览中", false);
+		new TextOptimizationModal(this.app, result, isPartial, (confirmed, editedText) => {
+			if (confirmed && editedText) {
+				if (isPartial) {
+					editor.replaceSelection(editedText);
+				} else {
+					editor.setValue(editedText);
+				}
+				this.updateStatusBar("已应用");
+				new Notice("智能润色已应用！");
+			} else {
+				this.updateStatusBar("已取消");
+			}
+		}).open();
+	}
+
+	/** 打开内联预览浮层（部分选中场景） */
+	private openInlineOverlay(
+		editor: Editor,
+		result: OptimizationResult,
+		selection: string,
+		from: EditorPosition,
+		to: EditorPosition,
+	) {
+		const view = this.app.workspace.getActiveViewOfType(MarkdownView);
+		if (!view) {
+			// 视图丢失时回退到 Modal
+			this.openOptimizationModal(editor, result, true);
+			return;
+		}
+
+		const provider = this.getAIProvider();
+
+		this.updateStatusBar("预览中", false);
+
+		const overlay = new InlineOptimizationOverlay(
+			this.app,
+			view,
+			editor,
+			selection,
+			from,
+			to,
+			(content, extraInstruction) => provider.optimize(content, true, extraInstruction),
+			result,
+			() => {
+				this.updateStatusBar("已应用");
+				new Notice("智能润色已应用！");
+			},
+			() => {
+				this.updateStatusBar("已取消");
+			},
+		);
+
+		overlay.show().catch((error) => {
+			console.error("内联浮层显示失败:", error);
+			new Notice(`内联浮层显示失败: ${getErrorMessage(error)}`);
+		});
 	}
 }
