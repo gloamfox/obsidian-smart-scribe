@@ -189,6 +189,67 @@
 	font-style: italic;
 }
 
+/* Inline Optimization Overlay */
+.ai-inline-optimization-overlay {
+	position: fixed;
+	z-index: var(--layer-popover, 100);
+	width: min(420px, calc(100vw - 32px));
+	max-height: 70vh;
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+	padding: 10px;
+	background: var(--background-primary);
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 8px;
+	box-shadow: var(--shadow-s, 0 2px 8px rgba(0, 0, 0, 0.15));
+}
+
+.ai-inline-optimization-preview {
+	max-height: 50vh;
+	overflow: auto;
+	padding: 8px 10px;
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 4px;
+	background: var(--background-secondary);
+	line-height: 1.6;
+	font-size: var(--font-text-size);
+}
+
+.ai-inline-optimization-preview .markdown-rendered {
+	margin: 0;
+}
+
+.ai-inline-optimization-loading {
+	color: var(--text-muted);
+	font-style: italic;
+	padding: 8px 0;
+	text-align: center;
+}
+
+.ai-inline-optimization-actions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 6px;
+	align-items: center;
+}
+
+.ai-inline-optimization-actions button {
+	flex: 0 0 auto;
+}
+
+.ai-inline-optimization-actions button:last-child {
+	margin-left: auto;
+}
+
+/* Supplement Input Modal */
+.ai-supplement-input {
+	width: 100%;
+	min-height: 100px;
+	margin-bottom: 12px;
+	resize: vertical;
+}
+
 /* Settings Tab Styles */
 .ai-settings-tab-bar {
 	display: flex;

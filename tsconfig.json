@@ -12,7 +12,7 @@
     "strictNullChecks": true,
     "lib": [
       "DOM",
-      "ES6"
+      "ES2020"
     ]
   },
   "include": [

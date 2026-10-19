@@ -203,7 +203,7 @@ export class VaultScanner {
 			if (cache) {
 				// frontmatter 中的标签
 				if (cache.frontmatter?.tags) {
-					const fmTags = cache.frontmatter.tags;
+					const fmTags: unknown = cache.frontmatter.tags;
 					if (Array.isArray(fmTags)) {
 						tags.push(...fmTags.map((t) => String(t)));
 					} else if (typeof fmTags === "string") {

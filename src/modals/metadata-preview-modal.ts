@@ -104,7 +104,7 @@ export class MetadataPreviewModal extends Modal {
 		shareCheckbox.addEventListener("change", (e) => {
 			this.editedResult.share = (e.target as HTMLInputElement).checked;
 		});
-		shareContainer.createEl("span", { text: " (选择是则追加 share: true)" });
+		shareContainer.createSpan({ text: " (选择是则追加 share: true)" });
 
 		// 按钮
 		const buttonContainer = contentEl.createDiv({ cls: "modal-button-container" });
